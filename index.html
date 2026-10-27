@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#1f5f99">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg">
+<title>Training</title>
+<style>
+:root{--bg:#f6f6f4;--card:#fff;--text:#1d1d1b;--muted:#6b6b66;--line:#ddd;--accent:#1f5f99;--good:#1e8449;--bad:#c0392b;--warn:#b9770e}
+@media (prefers-color-scheme:dark){:root{--bg:#161616;--card:#222;--text:#eee;--muted:#999;--line:#3a3a3a;--accent:#3d84c6;--good:#58c47f;--bad:#e57368;--warn:#f0b35a}}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:15px}
+header{position:sticky;top:0;background:var(--card);border-bottom:1px solid var(--line);display:flex;z-index:5}
+header button{flex:1;padding:14px 0;border:0;background:none;color:var(--muted);font-size:15px;border-bottom:3px solid transparent}
+header button.on{color:var(--text);border-bottom-color:var(--accent)}
+main{max-width:700px;margin:0 auto;padding:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:14px}
+.tab{display:none}.tab.on{display:block}
+label{display:block;font-size:12px;color:var(--muted);margin-bottom:3px}
+input,select,textarea{width:100%;padding:9px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--text);font-size:16px;font-family:inherit}
+select:disabled{opacity:.6}
+.row{display:grid;gap:8px;margin-bottom:10px}
+.c2{grid-template-columns:minmax(0,1fr) 150px}
+.c2t{grid-template-columns:minmax(0,1fr) 105px}
+.btn{padding:10px 14px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--text);font-size:15px;margin:0 4px 4px 0}
+.main{background:var(--accent);border-color:var(--accent);color:#fff}
+.err{color:var(--bad);font-size:13px;min-height:18px}
+.seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-top:10px}
+.seg button{flex:1;padding:9px 4px;border:0;background:none;color:var(--text);font-size:14px}
+.seg button.on{background:var(--accent);color:#fff}
+.hd{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.it{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line)}
+.it:last-child{border-bottom:0}
+.it .r{white-space:nowrap;text-align:right}
+.set{display:grid;grid-template-columns:22px minmax(0,1fr) 38px minmax(0,1fr) 36px 30px;gap:6px;align-items:center;margin:6px 0}
+.set span{font-size:13px;color:var(--muted)}
+.set.cardio{grid-template-columns:minmax(0,1fr) 36px minmax(0,1fr) 30px}
+.set input{text-align:center}
+.ic{border:0;background:none;color:var(--muted);font-size:17px;padding:4px 6px}
+.cmp{font-size:13px;margin-top:4px;min-height:0}
+.good{color:var(--good)}.bad{color:var(--bad)}.warn{color:var(--warn)}
+h3{font-size:15px;margin:0 0 6px}
+small{color:var(--muted)}
+.ch-grid{stroke:var(--line);stroke-width:1}
+.ch-line{fill:none;stroke:var(--accent);stroke-width:2}
+.ch-dot{fill:var(--accent)}
+.ch-rec{fill:var(--good)}
+.ch-txt{fill:var(--muted);font-size:10px;font-family:system-ui,sans-serif}
+</style>
+</head>
+<body>
+<header>
+  <button data-tab="train" class="on">Training</button>
+  <button data-tab="prog">Fortschritt</button>
+  <button data-tab="plans">Pläne</button>
+</header>
+<main>
+
+<section id="train" class="tab on">
+  <div class="card" id="startCard">
+    <h3>Neues Training</h3>
+    <div class="row c2">
+      <div><label>Plan</label><select id="sPlan"></select></div>
+      <div><label>Datum</label><input id="sDate" type="date"></div>
+    </div>
+    <button class="btn main" id="sGo">Training starten</button>
+  </div>
+  <div id="curBox" hidden>
+    <div class="card"><strong id="curTitle"></strong></div>
+    <div id="curItems"></div>
+    <div class="card">
+      <label>Übung hinzufügen</label>
+      <div class="row c2t">
+        <div><input id="aEx" list="exList" placeholder="z. B. Bankdrücken" autocomplete="off"></div>
+        <div><select id="aType"><option value="k">Kraft</option><option value="c">Cardio</option></select></div>
+      </div>
+      <div class="err" id="aErr"></div>
+      <button class="btn" id="aAdd">+ Übung</button>
+    </div>
+    <div class="card">
+      <label>Notiz (optional)</label>
+      <textarea id="curNote" rows="2"></textarea>
+      <div class="err" id="curErr"></div>
+      <button class="btn main" id="curSave">Training speichern</button>
+      <button class="btn" id="curDrop">Verwerfen</button>
+    </div>
+  </div>
+  <div class="card">
+    <h3>Verlauf</h3>
+    <div id="hist"></div>
+  </div>
+</section>
+
+<section id="prog" class="tab">
+  <div class="card">
+    <label>Übung</label>
+    <select id="pEx"></select>
+    <div class="seg" id="pSeg"></div>
+  </div>
+  <div class="card" id="pChart"></div>
+  <div class="card" id="pList"></div>
+</section>
+
+<section id="plans" class="tab">
+  <div class="card">
+    <h3 id="plHead">Neuer Plan</h3>
+    <div class="row"><div><label>Name</label><input id="plName" placeholder="Push"></div></div>
+    <label>Übungen</label>
+    <div id="plEx"></div>
+    <div class="row c2t" style="margin-top:6px">
+      <div><input id="plAdd" list="exList" placeholder="Übung" autocomplete="off"></div>
+      <div><select id="plType"><option value="k">Kraft</option><option value="c">Cardio</option></select></div>
+    </div>
+    <button class="btn" id="plAddBtn">+ Übung</button>
+    <div class="err" id="plErr"></div>
+    <button class="btn main" id="plSave">Plan speichern</button>
+    <button class="btn" id="plCancel" hidden>Abbrechen</button>
+  </div>
+  <div id="plList"></div>
+  <div class="card">
+    <h3>Alle Übungen</h3>
+    <div id="exItems"></div>
+  </div>
+  <div class="card">
+    <button class="btn" id="bExport">Backup exportieren</button>
+    <button class="btn" id="bImport">Backup importieren</button>
+    <input type="file" id="fileIn" accept=".json,application/json" hidden>
+    <p><small>Deine Daten liegen nur auf diesem Gerät. Exportiere ab und zu ein Backup.</small></p>
+  </div>
+</section>
+
+<datalist id="exList"></datalist>
+</main>
+<script>
+// ---------- Daten & Speicher ----------
+const KEY = "training-v1";
+const def = () => ({ ex:[], plans:[], workouts:[], cur:null });
+let data = load();
+function load(){ try { return Object.assign(def(), JSON.parse(localStorage.getItem(KEY)) || {}); } catch(e){ return def(); } }
+function save(){ localStorage.setItem(KEY, JSON.stringify(data)); }
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+const num = s => { const v = parseFloat(String(s ?? "").replace(",", ".")); return isNaN(v) ? null : v; };
+const fmt = (v, d = 1) => (+v).toLocaleString("de-DE", {maximumFractionDigits:d});
+const iso = d => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0,10);
+const todayIso = () => iso(new Date());
+const deDate = (s, opt = {weekday:"short",day:"2-digit",month:"2-digit",year:"numeric"}) => new Date(s + "T12:00").toLocaleDateString("de-DE", opt);
+const shortDate = s => deDate(s, {day:"2-digit",month:"2-digit"});
+const TYPE = {k:"Kraft", c:"Cardio"};
+
+// ---------- Tabs ----------
+function showTab(id){
+  document.querySelectorAll("header button, .tab").forEach(x => x.classList.remove("on"));
+  document.querySelector(`header button[data-tab="${id}"]`).classList.add("on"); $(id).classList.add("on");
+  if (id === "prog") renderProg();
+}
+document.querySelectorAll("header button").forEach(b => b.onclick = () => showTab(b.dataset.tab));
+
+// ---------- Übungen ----------
+const exById = id => data.ex.find(e => e.id === id) || {id, name:"?", t:"k"};
+const exByName = n => data.ex.find(e => e.name.toLowerCase() === n.trim().toLowerCase());
+function getEx(name, t){
+  let e = exByName(name);
+  if (!e){ e = {id:newId(), name:name.trim(), t}; data.ex.push(e); fillExList(); }
+  return e;
+}
+function fillExList(){
+  $("exList").innerHTML = data.ex.slice().sort((a,b) => a.name.localeCompare(b.name, "de")).map(e => `<option value="${esc(e.name)}">`).join("");
+}
+// Typ-Auswahl sperren, wenn die Übung schon existiert
+function linkType(inp, sel){
+  inp.addEventListener("input", () => { const e = exByName(inp.value); sel.disabled = !!e; if (e) sel.value = e.t; });
+}
+linkType($("aEx"), $("aType")); linkType($("plAdd"), $("plType"));
+
+// ---------- Rechnen ----------
+// Geschätztes 1RM nach Epley: w * (1 + r/30)
+const orm = s => s.r <= 1 ? s.w : s.w * (1 + s.r / 30);
+const sorted = () => data.workouts.slice().sort((a,b) => a.d.localeCompare(b.d));
+function itemVal(it, key){
+  if (it.sets){
+    if (key === "max") return Math.max(...it.sets.map(s => s.w));
+    if (key === "orm") return Math.max(...it.sets.map(orm));
+    if (key === "vol") return it.sets.reduce((a,s) => a + s.w * s.r, 0);
+    if (key === "reps") return it.sets.reduce((a,s) => a + s.r, 0);
+  }
+  if (key === "km") return it.km;
+  if (key === "min") return it.min;
+  if (key === "pace") return it.km && it.min ? it.min / it.km : null;
+  return null;
+}
+function sessions(exId, skipId){
+  return sorted().filter(w => w.id !== skipId).map(w => ({ d:w.d, it:w.items.find(i => i.ex === exId) })).filter(x => x.it);
+}
+function lastOf(exId){
+  const c = data.cur, list = sessions(exId, c && c.editId).filter(x => !c || x.d <= c.d);
+  return list[list.length - 1] || null;
+}
+function bestOrm(exId){
+  const c = data.cur, v = sessions(exId, c && c.editId).map(x => itemVal(x.it, "orm"));
+  return v.length ? Math.max(...v) : null;
+}
+const fmtPace = v => { let m = Math.floor(v), s = Math.round((v - m) * 60); if (s === 60){ m++; s = 0; } return `${m}:${String(s).padStart(2,"0")}`; };
+function summary(it){
+  if (it.sets) return it.sets.map(s => `${fmt(s.w)} kg × ${s.r}`).join(" · ");
+  return [it.min != null ? fmt(it.min) + " min" : "", it.km != null ? fmt(it.km, 2) + " km" : "", itemVal(it, "pace") ? fmtPace(itemVal(it, "pace")) + " min/km" : ""].filter(Boolean).join(" · ");
+}
+
+// ---------- Training starten ----------
+function fillPlanSelect(){
+  const s = $("sPlan"), cur = s.value;
+  s.innerHTML = `<option value="">Ohne Plan (spontan)</option>` + data.plans.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join("");
+  s.value = data.plans.some(p => p.id === cur) ? cur : "";
+}
+function newItem(exId){
+  const e = exById(exId);
+  if (e.t === "c") return {ex:exId, min:"", km:""};
+  const last = lastOf(exId), n = last ? last.it.sets.length : 3;
+  return {ex:exId, sets:Array.from({length:n}, () => ({w:"", r:""}))};
+}
+function startTraining(planId, d){
+  const p = data.plans.find(x => x.id === planId);
+  data.cur = {d, plan:p ? p.id : null, note:"", editId:null, items:[]};
+  data.cur.items = p ? p.ex.map(newItem) : [];
+  save(); renderCur(); showTab("train"); window.scrollTo({top:0});
+}
+$("sGo").onclick = () => startTraining($("sPlan").value, $("sDate").value || todayIso());
+
+// ---------- Laufendes Training ----------
+function cmpHtml(k){
+  const it = data.cur.items[k]; if (!it.sets) return "";
+  const done = it.sets.map(s => ({w:num(s.w) ?? 0, r:num(s.r)})).filter(s => s.r > 0);
+  if (!done.length) return "";
+  const now = Math.max(...done.map(orm)), last = lastOf(it.ex), best = bestOrm(it.ex);
+  if (best !== null && now > best + .05) return `<span class="good">★ Neuer Bestwert: ${fmt(now)} kg 1RM</span>`;
+  if (!last) return `<small>1RM heute: ${fmt(now)} kg</small>`;
+  const diff = now - itemVal(last.it, "orm");
+  if (diff > .05) return `<span class="good">↑ ${fmt(diff)} kg 1RM mehr als letztes Mal</span>`;
+  if (diff < -.05) return `<span class="warn">↓ ${fmt(-diff)} kg 1RM weniger als letztes Mal</span>`;
+  return `<small>= gleich wie letztes Mal</small>`;
+}
+function renderCur(){
+  const c = data.cur;
+  $("startCard").hidden = !!c; $("curBox").hidden = !c;
+  if (!c) return;
+  const p = data.plans.find(x => x.id === c.plan);
+  $("curTitle").textContent = `${c.editId ? "Bearbeiten: " : ""}${p ? p.name : "Training"} · ${deDate(c.d)}`;
+  $("curNote").value = c.note || "";
+  $("curItems").innerHTML = c.items.map((it, k) => {
+    const e = exById(it.ex), last = lastOf(it.ex), best = bestOrm(it.ex);
+    let h = `<div class="card"><div class="hd"><strong>${esc(e.name)}</strong><span>${k ? `<button class="ic" data-up="${k}" aria-label="Nach oben">↑</button>` : ""}<button class="ic" data-rm="${k}" aria-label="Entfernen">✕</button></span></div>`;
+    h += `<small>${last ? `Letztes Mal (${shortDate(last.d)}): ${summary(last.it)}` : "Noch keine früheren Einträge."}</small>`;
+    if (it.sets){
+      if (best !== null) h += `<br><small>Bestwert: ${fmt(best)} kg 1RM (geschätzt)</small>`;
+      const ls = last ? last.it.sets : [];
+      h += it.sets.map((s, i) => `<div class="set"><span>${i + 1}</span>
+        <input data-k="${k}" data-i="${i}" data-f="w" value="${esc(s.w)}" placeholder="${ls[i] ? fmt(ls[i].w) : ""}" inputmode="decimal"><span>kg ×</span>
+        <input data-k="${k}" data-i="${i}" data-f="r" value="${esc(s.r)}" placeholder="${ls[i] ? ls[i].r : ""}" inputmode="numeric"><span>Wdh</span>
+        <button class="ic" data-rs="${k}-${i}" aria-label="Satz löschen">✕</button></div>`).join("");
+      h += `<button class="btn" data-as="${k}">+ Satz</button><div class="cmp" id="cmp${k}">${cmpHtml(k)}</div>`;
+    } else {
+      h += `<div class="set cardio">
+        <input data-k="${k}" data-f="min" value="${esc(it.min)}" placeholder="${last && last.it.min != null ? fmt(last.it.min) : ""}" inputmode="decimal"><span>min</span>
+        <input data-k="${k}" data-f="km" value="${esc(it.km)}" placeholder="${last && last.it.km != null ? fmt(last.it.km, 2) : ""}" inputmode="decimal"><span>km</span></div>`;
+    }
+    return h + `</div>`;
+  }).join("");
+}
+$("curItems").addEventListener("input", e => {
+  const t = e.target, f = t.dataset.f; if (!f) return;
+  const k = +t.dataset.k, it = data.cur.items[k];
+  if (f === "w" || f === "r") it.sets[+t.dataset.i][f] = t.value; else it[f] = t.value;
+  save();
+  const c = $("cmp" + k); if (c) c.innerHTML = cmpHtml(k);
+});
+$("curItems").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  const items = data.cur.items;
+  if (b.dataset.as !== undefined){
+    const it = items[+b.dataset.as], prev = it.sets[it.sets.length - 1];
+    it.sets.push(prev ? {w:prev.w, r:prev.r} : {w:"", r:""});
+  } else if (b.dataset.rs){
+    const [k, i] = b.dataset.rs.split("-").map(Number); items[k].sets.splice(i, 1);
+  } else if (b.dataset.rm !== undefined){
+    const k = +b.dataset.rm;
+    if (!confirm(`${exById(items[k].ex).name} aus diesem Training entfernen?`)) return;
+    items.splice(k, 1);
+  } else if (b.dataset.up !== undefined){
+    const k = +b.dataset.up; [items[k - 1], items[k]] = [items[k], items[k - 1]];
+  } else return;
+  save(); renderCur();
+});
+$("curNote").addEventListener("input", () => { data.cur.note = $("curNote").value; save(); });
+$("aAdd").onclick = () => {
+  const name = $("aEx").value.trim(), err = $("aErr");
+  if (!name){ err.textContent = "Namen der Übung eingeben."; return; }
+  const e = getEx(name, $("aType").value);
+  if (data.cur.items.some(i => i.ex === e.id)){ err.textContent = "Diese Übung ist schon im Training."; return; }
+  err.textContent = ""; data.cur.items.push(newItem(e.id)); save();
+  $("aEx").value = ""; $("aType").disabled = false;
+  renderCur(); renderExItems();
+  const cards = $("curItems").children; cards[cards.length - 1].scrollIntoView({behavior:"smooth", block:"center"});
+};
+$("curSave").onclick = () => {
+  const c = data.cur, items = [];
+  c.items.forEach(it => {
+    if (it.sets){
+      const sets = it.sets.map(s => ({w:num(s.w) ?? 0, r:num(s.r)})).filter(s => s.r > 0).map(s => ({w:s.w, r:Math.round(s.r)}));
+      if (sets.length) items.push({ex:it.ex, sets});
+    } else {
+      const min = num(it.min), km = num(it.km);
+      if (min !== null || km !== null) items.push({ex:it.ex, min, km});
+    }
+  });
+  if (!items.length){ $("curErr").textContent = "Noch nichts eingetragen. Bei Kraftübungen zählen Sätze mit Wiederholungen."; return; }
+  $("curErr").textContent = "";
+  const w = {id:c.editId || newId(), d:c.d, plan:c.plan, note:(c.note || "").trim(), items};
+  const idx = data.workouts.findIndex(x => x.id === w.id);
+  if (idx >= 0) data.workouts[idx] = w; else data.workouts.push(w);
+  data.cur = null; save(); renderAll(); window.scrollTo({top:0, behavior:"smooth"});
+};
+$("curDrop").onclick = () => {
+  if (confirm(data.cur.editId ? "Änderungen verwerfen?" : "Training verwerfen? Alle Eingaben gehen verloren.")){ data.cur = null; save(); renderCur(); }
+};
+
+// ---------- Verlauf ----------
+let showAll = false;
+function renderHist(){
+  const list = sorted().reverse(), shown = showAll ? list : list.slice(0, 20);
+  $("hist").innerHTML = list.length ? shown.map(w => {
+    const p = data.plans.find(x => x.id === w.plan);
+    return `<div class="it" style="align-items:start"><div>
+        <strong>${deDate(w.d)}</strong>${p ? ` <small>· ${esc(p.name)}</small>` : ""}
+        ${w.items.map(it => `<br><small><b>${esc(exById(it.ex).name)}:</b> ${summary(it)}</small>`).join("")}
+        ${w.note ? `<br><small><i>${esc(w.note)}</i></small>` : ""}
+      </div><div class="r"><button class="ic" data-we="${w.id}" aria-label="Bearbeiten">✎</button><button class="ic" data-wd="${w.id}" aria-label="Löschen">✕</button></div></div>`;
+  }).join("") + (list.length > 20 && !showAll ? `<button class="btn" id="hMore" style="margin-top:8px">Alle ${list.length} anzeigen</button>` : "")
+  : `<small>Noch keine Trainings gespeichert.</small>`;
+  if ($("hMore")) $("hMore").onclick = () => { showAll = true; renderHist(); };
+  $("hist").querySelectorAll("[data-we]").forEach(b => b.onclick = () => {
+    if (data.cur && !confirm("Laufendes Training verwerfen und dieses bearbeiten?")) return;
+    const w = data.workouts.find(x => x.id === b.dataset.we);
+    data.cur = {d:w.d, plan:w.plan, note:w.note || "", editId:w.id, items:w.items.map(it => it.sets
+      ? {ex:it.ex, sets:it.sets.map(s => ({w:String(s.w).replace(".", ","), r:String(s.r)}))}
+      : {ex:it.ex, min:it.min == null ? "" : String(it.min).replace(".", ","), km:it.km == null ? "" : String(it.km).replace(".", ",")})};
+    save(); renderCur(); window.scrollTo({top:0, behavior:"smooth"});
+  });
+  $("hist").querySelectorAll("[data-wd]").forEach(b => b.onclick = () => {
+    const w = data.workouts.find(x => x.id === b.dataset.wd);
+    if (confirm(`Training vom ${deDate(w.d)} löschen?`)){ data.workouts = data.workouts.filter(x => x !== w); save(); renderAll(); }
+  });
+}
+
+// ---------- Fortschritt ----------
+const METRICS = {
+  k:[["orm","1RM","kg",1],["max","Max. kg","kg",1],["vol","Volumen","kg",0],["reps","Wdh.","",0]],
+  c:[["km","Distanz","km",2],["min","Dauer","min",0],["pace","Tempo","min/km",2]]
+};
+const metric = {k:"orm", c:"km"};
+function chart(pts, dec, rec){
+  if (pts.length < 2) return `<small>Ab zwei Trainings erscheint hier ein Diagramm.</small>`;
+  const W = 320, H = 170, L = 40, R = 10, T = 10, B = 22, ys = pts.map(p => p.y);
+  let lo = Math.min(...ys), hi = Math.max(...ys);
+  if (lo === hi){ lo -= 1; hi += 1; }
+  const pad = (hi - lo) * .1; lo -= pad; hi += pad;
+  const x = i => L + i * (W - L - R) / (pts.length - 1), y = v => T + (hi - v) * (H - T - B) / (hi - lo);
+  let s = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block">`;
+  for (let k = 0; k <= 3; k++){
+    const v = lo + (hi - lo) * k / 3, yy = y(v);
+    s += `<line class="ch-grid" x1="${L}" x2="${W - R}" y1="${yy}" y2="${yy}"/><text class="ch-txt" x="${L - 4}" y="${yy + 3}" text-anchor="end">${fmt(v, dec)}</text>`;
+  }
+  s += `<polyline class="ch-line" points="${pts.map((p,i) => x(i) + "," + y(p.y)).join(" ")}"/>`;
+  if (pts.length <= 40) s += pts.map((p,i) => `<circle class="${rec[i] ? "ch-rec" : "ch-dot"}" cx="${x(i)}" cy="${y(p.y)}" r="${rec[i] ? 4 : 3}"/>`).join("");
+  s += `<text class="ch-txt" x="${L}" y="${H - 6}">${pts[0].l}</text><text class="ch-txt" x="${W - R}" y="${H - 6}" text-anchor="end">${pts[pts.length - 1].l}</text>`;
+  return s + `</svg>`;
+}
+function renderProg(){
+  const used = data.ex.filter(e => data.workouts.some(w => w.items.some(i => i.ex === e.id))).sort((a,b) => a.name.localeCompare(b.name, "de"));
+  const sel = $("pEx"), cur = sel.value;
+  sel.innerHTML = used.map(e => `<option value="${e.id}">${esc(e.name)}</option>`).join("");
+  if (!used.length){
+    $("pSeg").innerHTML = ""; $("pList").innerHTML = "";
+    $("pChart").innerHTML = `<small>Noch keine Trainings gespeichert.</small>`; return;
+  }
+  sel.value = used.some(e => e.id === cur) ? cur : used[0].id;
+  const e = exById(sel.value), M = METRICS[e.t], key = metric[e.t], m = M.find(x => x[0] === key);
+  $("pSeg").innerHTML = M.map(([k,l]) => `<button data-m="${k}" class="${k === key ? "on" : ""}">${l}</button>`).join("");
+  $("pSeg").querySelectorAll("button").forEach(b => b.onclick = () => { metric[e.t] = b.dataset.m; renderProg(); });
+  const lowBetter = key === "pace";
+  const S = sessions(e.id).map(x => ({...x, v:itemVal(x.it, key)})).filter(x => x.v != null);
+  let best = null;
+  const rec = S.map((x, i) => { const r = best === null || (lowBetter ? x.v < best : x.v > best); if (r) best = x.v; return r && i > 0; });
+  const show = v => key === "pace" ? fmtPace(v) : fmt(v, m[3]);
+  let head = "";
+  if (S.length){
+    const first = S[0].v, lastV = S[S.length - 1].v, diff = lastV - first, better = lowBetter ? diff < 0 : diff > 0;
+    head = `<p style="margin-top:0">Bestwert: <b>${show(best)} ${m[2]}</b>`;
+    if (S.length > 1 && diff) head += `<br>Seit dem ersten Training: <b class="${better ? "good" : "warn"}">${diff > 0 ? "+" : "−"}${key === "pace" ? fmtPace(Math.abs(diff)) : fmt(Math.abs(diff), m[3])} ${m[2]}</b>`;
+    head += `</p>`;
+  }
+  const n = S.length > 60 ? S.length - 60 : 0;
+  $("pChart").innerHTML = head + (S.length ? chart(S.slice(n).map(x => ({l:shortDate(x.d), y:x.v})), m[3], rec.slice(n)) : `<small>Für diese Ansicht fehlen Werte.</small>`) +
+    (key === "orm" ? `<p style="margin-bottom:0"><small>1RM geschätzt nach Epley aus dem besten Satz: Gewicht × (1 + Wdh/30). Grüne Punkte = neuer Bestwert.</small></p>` : S.length > 1 ? `<p style="margin-bottom:0"><small>Grüne Punkte = neuer Bestwert.</small></p>` : "");
+  $("pList").innerHTML = S.slice().reverse().map((x, i) => `<div class="it" style="align-items:start">
+      <div>${deDate(x.d)}<br><small>${summary(x.it)}</small></div>
+      <div class="r"><b class="${rec[S.length - 1 - i] ? "good" : ""}">${rec[S.length - 1 - i] ? "★ " : ""}${show(x.v)}</b> <small>${m[2]}</small></div>
+    </div>`).join("");
+}
+$("pEx").onchange = renderProg;
+
+// ---------- Pläne ----------
+let plDraft = [], plEdit = null;
+function renderDraft(){
+  $("plEx").innerHTML = plDraft.length ? plDraft.map((id, i) => `<div class="it">
+      <span>${i + 1}. ${esc(exById(id).name)} <small>${TYPE[exById(id).t]}</small></span>
+      <span class="r">${i ? `<button class="ic" data-pu="${i}" aria-label="Nach oben">↑</button>` : ""}<button class="ic" data-pr="${i}" aria-label="Entfernen">✕</button></span>
+    </div>`).join("") : `<small>Noch keine Übungen.</small>`;
+}
+$("plEx").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  if (b.dataset.pu){ const i = +b.dataset.pu; [plDraft[i - 1], plDraft[i]] = [plDraft[i], plDraft[i - 1]]; }
+  if (b.dataset.pr) plDraft.splice(+b.dataset.pr, 1);
+  renderDraft();
+});
+$("plAddBtn").onclick = () => {
+  const name = $("plAdd").value.trim();
+  if (!name){ $("plErr").textContent = "Namen der Übung eingeben."; return; }
+  const e = getEx(name, $("plType").value);
+  if (plDraft.includes(e.id)){ $("plErr").textContent = "Diese Übung ist schon im Plan."; return; }
+  $("plErr").textContent = ""; plDraft.push(e.id); save();
+  $("plAdd").value = ""; $("plType").disabled = false; renderDraft(); renderExItems();
+};
+$("plAdd").addEventListener("keydown", e => { if (e.key === "Enter") $("plAddBtn").click(); });
+$("plSave").onclick = () => {
+  const name = $("plName").value.trim();
+  if (!name){ $("plErr").textContent = "Namen für den Plan eingeben."; return; }
+  if (!plDraft.length){ $("plErr").textContent = "Mindestens eine Übung hinzufügen."; return; }
+  const p = {id:plEdit || newId(), name, ex:plDraft.slice()};
+  const idx = data.plans.findIndex(x => x.id === p.id);
+  if (idx >= 0) data.plans[idx] = p; else data.plans.push(p);
+  save(); resetPlan(); renderPlans(); fillPlanSelect();
+};
+function resetPlan(){
+  plDraft = []; plEdit = null; $("plName").value = ""; $("plAdd").value = ""; $("plType").disabled = false;
+  $("plErr").textContent = ""; $("plHead").textContent = "Neuer Plan"; $("plCancel").hidden = true; renderDraft();
+}
+$("plCancel").onclick = resetPlan;
+function renderPlans(){
+  $("plList").innerHTML = data.plans.map(p => `<div class="card">
+      <div class="hd"><strong>${esc(p.name)}</strong><span><button class="ic" data-pe="${p.id}" aria-label="Bearbeiten">✎</button><button class="ic" data-pd="${p.id}" aria-label="Löschen">✕</button></span></div>
+      <small>${p.ex.map(id => esc(exById(id).name)).join(" · ")}</small><br>
+      <button class="btn main" data-ps="${p.id}" style="margin-top:10px">Training starten</button>
+    </div>`).join("");
+  $("plList").querySelectorAll("[data-ps]").forEach(b => b.onclick = () => {
+    if (data.cur && !confirm("Laufendes Training verwerfen und neu starten?")) return;
+    startTraining(b.dataset.ps, todayIso());
+  });
+  $("plList").querySelectorAll("[data-pe]").forEach(b => b.onclick = () => {
+    const p = data.plans.find(x => x.id === b.dataset.pe);
+    plEdit = p.id; plDraft = p.ex.slice(); $("plName").value = p.name;
+    $("plHead").textContent = "Plan bearbeiten"; $("plCancel").hidden = false; renderDraft();
+    window.scrollTo({top:0, behavior:"smooth"});
+  });
+  $("plList").querySelectorAll("[data-pd]").forEach(b => b.onclick = () => {
+    const p = data.plans.find(x => x.id === b.dataset.pd);
+    if (confirm(`Plan „${p.name}“ löschen? Gespeicherte Trainings bleiben erhalten.`)){ data.plans = data.plans.filter(x => x !== p); save(); renderPlans(); fillPlanSelect(); }
+  });
+}
+function useCount(id){
+  return data.workouts.filter(w => w.items.some(i => i.ex === id)).length;
+}
+function renderExItems(){
+  const list = data.ex.slice().sort((a,b) => a.name.localeCompare(b.name, "de"));
+  $("exItems").innerHTML = list.length ? list.map(e => `<div class="it">
+      <span>${esc(e.name)} <small>${TYPE[e.t]} · ${useCount(e.id)}× trainiert</small></span>
+      <span class="r"><button class="ic" data-xe="${e.id}" aria-label="Umbenennen">✎</button><button class="ic" data-xd="${e.id}" aria-label="Löschen">✕</button></span>
+    </div>`).join("") : `<small>Übungen entstehen automatisch, wenn du sie zu einem Plan oder Training hinzufügst.</small>`;
+  $("exItems").querySelectorAll("[data-xe]").forEach(b => b.onclick = () => {
+    const e = exById(b.dataset.xe), n = (prompt("Neuer Name:", e.name) || "").trim();
+    if (!n || n === e.name) return;
+    const d = exByName(n); if (d && d.id !== e.id){ alert("Diesen Namen gibt es schon."); return; }
+    e.name = n; save(); renderAll();
+  });
+  $("exItems").querySelectorAll("[data-xd]").forEach(b => b.onclick = () => {
+    const e = exById(b.dataset.xd), id = e.id;
+    const inUse = useCount(id) || data.plans.some(p => p.ex.includes(id)) || plDraft.includes(id) || (data.cur && data.cur.items.some(i => i.ex === id));
+    if (inUse){ alert(`${e.name} wird noch in einem Training oder Plan verwendet und kann nicht gelöscht werden.`); return; }
+    if (confirm(`${e.name} löschen?`)){ data.ex = data.ex.filter(x => x.id !== id); save(); fillExList(); renderExItems(); }
+  });
+}
+
+// ---------- Backup ----------
+$("bExport").onclick = () => {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], {type:"application/json"}));
+  a.download = `training-backup-${todayIso()}.json`; a.click();
+};
+$("bImport").onclick = () => $("fileIn").click();
+$("fileIn").onchange = e => {
+  const file = e.target.files[0]; if (!file) return;
+  file.text().then(t => {
+    try {
+      const d = JSON.parse(t);
+      if (!Array.isArray(d.ex) || !Array.isArray(d.plans) || !Array.isArray(d.workouts)) throw 0;
+      if (confirm("Aktuelle Daten durch dieses Backup ersetzen?")){ data = Object.assign(def(), d); save(); resetPlan(); renderAll(); }
+    } catch(_) { alert("Diese Datei ist kein gültiges Backup."); }
+    e.target.value = "";
+  });
+};
+
+// ---------- Start ----------
+function renderAll(){ fillExList(); fillPlanSelect(); renderCur(); renderHist(); renderPlans(); renderExItems(); renderDraft(); if ($("prog").classList.contains("on")) renderProg(); }
+$("sDate").value = todayIso();
+renderAll();
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js");
+</script>
+</body>
+</html>
